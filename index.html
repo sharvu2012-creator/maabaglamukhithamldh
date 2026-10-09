@@ -1679,11 +1679,24 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
         $('ns-seats').textContent = avail + ' of ' + cap + ' seats remaining';
       }
     } catch(e) {
-      $('teaser-count').textContent = 'Live availability unavailable right now';
-      $('teaser-status-label').textContent = windowOpen ? 'Check booking page' : 'Opens Wednesday';
-      if ($('ns-status')) {
-        $('ns-status').textContent = 'Check booking page';
-        $('ns-seats').textContent = 'Live availability unavailable right now';
+      // No future session in the database yet — compute the next Thursday locally
+      // so the page always shows the correct upcoming date instead of an error.
+      var _d = new Date(), _dd = _d.getDay(), _df = (4 - _dd + 7) % 7;
+      var _nt = new Date(_d);
+      _nt.setDate(_d.getDate() + _df);
+      _nt.setHours(21, 0, 0, 0);
+      if (_nt <= new Date()) _nt.setDate(_nt.getDate() + 7);
+      var _ntStr = _nt.toISOString().slice(0, 10);
+      var _label = windowOpen ? 'Opens Wednesday' : 'Opens Wednesday';
+      $('teaser-count').textContent = 'Next session ' + fmtDate(_ntStr);
+      $('teaser-status-label').textContent = _label;
+      if ($('ns-date')) {
+        $('ns-date').textContent = fmtDate(_ntStr);
+        $('ns-time').textContent = '9:00 PM';
+        $('ns-venue').textContent = 'Maa Baglamukhi Dham, Ludhiana';
+        $('ns-fee').textContent = '—';
+        $('ns-status').textContent = _label;
+        $('ns-seats').textContent = 'Seat availability opens Wednesday';
       }
     }
   }
