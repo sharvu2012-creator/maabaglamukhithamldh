@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/booking-flow", "destination": "/booking-flow.html" },
+    { "source": "/booking-flow/", "destination": "/booking-flow.html" }
+  ]
+}
