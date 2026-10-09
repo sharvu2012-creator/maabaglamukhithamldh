@@ -1597,56 +1597,48 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
            ' (' + dt.toLocaleDateString('en-IN', { weekday:'long' }) + ')';
   };
 
-  // Compute next Thursday 21:00 from a given date (or today)
-  function nextThursday(fromDate){
-    const d = fromDate ? new Date(fromDate + 'T00:00:00') : new Date();
-    const dow = d.getDay();
-    let diff = (4 - dow + 7) % 7;
-    d.setDate(d.getDate() + diff);
-    d.setHours(21, 0, 0, 0);
-    if (d <= new Date()) d.setDate(d.getDate() + 7);
-    return d;
+  // Local-date string (toISOString would shift the day backwards in UTC+5:30)
+  function isoLocal(d){
+    const p = n => (n < 10 ? '0' : '') + n;
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
 
-  // Auto-create a session row in Supabase for the given Thursday
-  async function autoCreateSession(thursdayDate){
-    const dateStr = thursdayDate.toISOString().slice(0, 10);
-    const { data, error } = await supabase.from('sessions').insert({
-      session_date: dateStr,
-      mantra_time: '21:00:00',
-      reporting_time: '20:00:00',
-      venue: 'Maa Baglamukhi Dham, Ludhiana',
-      fee_per_participant: 2100,
-      capacity: 15,
-      manual_status: 'open'
-    }).select().maybeSingle();
-    if (error || !data) return null;
-    const { data: rows, error: rpcErr } = await supabase.rpc('get_session_status', { p_session_id: data.id });
-    if (rpcErr || !rows || !rows.length) return null;
-    return { sess: data, status: rows[0] };
+  // The Thursday this booking week is for.
+  // A booking week starts Wednesday 00:00 — at that moment the site rolls over to the
+  // NEXT Thursday, so seats reset to full every Wednesday midnight.
+  function activeThursday(){
+    const now = new Date();
+    const dow = now.getDay();
+    const thu = new Date(now);
+    thu.setDate(now.getDate() + ((4 - dow + 7) % 7));
+    thu.setHours(0, 0, 0, 0);
+    const wed = new Date(thu);
+    wed.setDate(thu.getDate() - 1);          // Wednesday before that Thursday
+    if (now >= wed) thu.setDate(thu.getDate() + 7);   // past Wednesday → next Thursday
+    return thu;
   }
 
-  // Find the next session with available seats; auto-create if none exists
+  // The session for the current booking week. If that Thursday is full, bookings stay
+  // closed until Wednesday midnight, when this rolls to the following Thursday.
   async function findAvailableSession(){
-    const today = new Date().toISOString().slice(0,10);
-    const { data: sess, error } = await supabase.from('sessions')
+    const target = isoLocal(activeThursday());
+    let { data: sess, error } = await supabase.from('sessions')
       .select('id, session_date, mantra_time, reporting_time, venue, fee_per_participant, capacity')
-      .gte('session_date', today).order('session_date', { ascending:true }).limit(1).maybeSingle();
+      .eq('session_date', target).limit(1).maybeSingle();
     if (error || !sess) {
-      // No session at all — create next Thursday
-      return await autoCreateSession(nextThursday());
+      // not created yet — fall back to the nearest upcoming session
+      const fb = await supabase.from('sessions')
+        .select('id, session_date, mantra_time, reporting_time, venue, fee_per_participant, capacity')
+        .gte('session_date', target).order('session_date', { ascending:true }).limit(1).maybeSingle();
+      if (fb.error || !fb.data) return null;
+      sess = fb.data;
     }
     const { data: rows, error: rpcErr } = await supabase.rpc('get_session_status', { p_session_id: sess.id });
     if (rpcErr || !rows || !rows.length) return null;
-    if (rows[0].available_seats > 0) return { sess, status: rows[0] };
-    // Session exists but is full — create the Thursday after it
-    return await autoCreateSession(nextThursday(sess.session_date));
+    return { sess, status: rows[0] };
   }
 
   async function hydrate(){
-    // weekly window: open Wed 00:00 → Thu 21:00
-    const now = new Date(), dow = now.getDay();
-    const windowOpen = dow === 3 || (dow === 4 && now.getHours() < 21);
     try {
       const result = await findAvailableSession();
       if (!result) throw new Error('no session');
@@ -1665,8 +1657,7 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
       track.setAttribute('aria-valuemax', cap);
 
       let label = statusMap[s.status_label] || 'Open';
-      if (!windowOpen) label = 'Opens Wednesday';
-      else if (avail <= 0) label = 'Full — reopens Wednesday';
+      if (avail <= 0) label = 'Full — reopens Wednesday';
       $('teaser-status-label').textContent = label;
 
       // hydrate the "Next Thursday's Beej Mala" section
@@ -1686,8 +1677,8 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
       _nt.setDate(_d.getDate() + _df);
       _nt.setHours(21, 0, 0, 0);
       if (_nt <= new Date()) _nt.setDate(_nt.getDate() + 7);
-      var _ntStr = _nt.toISOString().slice(0, 10);
-      var _label = windowOpen ? 'Opens Wednesday' : 'Opens Wednesday';
+      var _ntStr = isoLocal(_nt);
+      var _label = 'Open';
       $('teaser-count').textContent = 'Next session ' + fmtDate(_ntStr);
       $('teaser-status-label').textContent = _label;
       if ($('ns-date')) {
@@ -1696,7 +1687,7 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
         $('ns-venue').textContent = 'Maa Baglamukhi Dham, Ludhiana';
         $('ns-fee').textContent = '—';
         $('ns-status').textContent = _label;
-        $('ns-seats').textContent = 'Seat availability opens Wednesday';
+        $('ns-seats').textContent = 'Booking open — seats limited';
       }
     }
   }
