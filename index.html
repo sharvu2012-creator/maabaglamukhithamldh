@@ -1638,37 +1638,69 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
     return { sess, status: rows[0] };
   }
 
+  // ---- LIVE seat updates: re-query when a booking/payment changes ----
+  let liveSessionId = null;
+  let liveTimer = null;
+
+  function paintSeats(sess, s) {
+    const cap = s.capacity;
+    const avail = cap - s.confirmed_seats;
+    $('teaser-date').textContent = fmtDate(s.session_date);
+    $('teaser-time').textContent = fmtTime(s.mantra_time);
+    $('teaser-reporting').textContent = fmtTime(s.reporting_time);
+    $('teaser-fee').textContent = '₹' + Number(s.fee_per_participant).toLocaleString('en-IN');
+    $('teaser-count').textContent = avail + ' of ' + cap + ' seats available';
+    $('teaser-bar').style.width = Math.round(avail / cap * 100) + '%';
+    const track = $('teaser-bar-track');
+    track.setAttribute('aria-valuenow', avail);
+    track.setAttribute('aria-valuemax', cap);
+    let label = statusMap[s.status_label] || 'Open';
+    if (avail <= 0) label = 'Full — reopens Wednesday';
+    $('teaser-status-label').textContent = label;
+    if ($('ns-date')) {
+      $('ns-date').textContent = fmtDate(s.session_date);
+      $('ns-time').textContent = fmtTime(s.mantra_time);
+      $('ns-venue').textContent = sess.venue || 'Maa Baglamukhi Dham, Ludhiana';
+      $('ns-fee').textContent = '₹' + Number(s.fee_per_participant).toLocaleString('en-IN');
+      $('ns-status').textContent = label;
+      $('ns-seats').textContent = avail + ' of ' + cap + ' seats remaining';
+    }
+  }
+
+  async function refreshSeats() {
+    if (!liveSessionId) return;
+    try {
+      const { data: rows, error } = await supabase.rpc('get_session_status', { p_session_id: liveSessionId });
+      if (error || !rows || !rows.length) return;
+      const s = rows[0];
+      const { data: sess } = await supabase.from('sessions')
+        .select('id, session_date, mantra_time, reporting_time, venue, fee_per_participant, capacity')
+        .eq('id', liveSessionId).maybeSingle();
+      paintSeats(sess || {}, s);
+    } catch (e) { /* silent — keep last known values */ }
+  }
+
+  function watchSeats(sessionId) {
+    liveSessionId = sessionId;
+    // 1) Supabase realtime (instant, needs the bookings table added to the realtime publication)
+    try {
+      supabase.channel('pk-seat-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => refreshSeats())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, () => refreshSeats())
+        .subscribe();
+    } catch (e) { /* realtime unavailable — polling below still covers it */ }
+    // 2) polling fallback (works with zero dashboard setup)
+    if (liveTimer) clearInterval(liveTimer);
+    liveTimer = setInterval(refreshSeats, 45000);
+  }
+
   async function hydrate(){
     try {
       const result = await findAvailableSession();
       if (!result) throw new Error('no session');
       const { sess, status: s } = result;
-
-      $('teaser-date').textContent = fmtDate(s.session_date);
-      $('teaser-time').textContent = fmtTime(s.mantra_time);
-      $('teaser-reporting').textContent = fmtTime(s.reporting_time);
-      $('teaser-fee').textContent = '₹' + Number(s.fee_per_participant).toLocaleString('en-IN');
-
-      const avail = s.available_seats, cap = s.capacity;
-      $('teaser-count').textContent = avail + ' of ' + cap + ' seats available';
-      $('teaser-bar').style.width = Math.round(avail / cap * 100) + '%';
-      const track = $('teaser-bar-track');
-      track.setAttribute('aria-valuenow', avail);
-      track.setAttribute('aria-valuemax', cap);
-
-      let label = statusMap[s.status_label] || 'Open';
-      if (avail <= 0) label = 'Full — reopens Wednesday';
-      $('teaser-status-label').textContent = label;
-
-      // hydrate the "Next Thursday's Beej Mala" section
-      if ($('ns-date')) {
-        $('ns-date').textContent = fmtDate(s.session_date);
-        $('ns-time').textContent = fmtTime(s.mantra_time);
-        $('ns-venue').textContent = sess.venue || 'Maa Baglamukhi Dham, Ludhiana';
-        $('ns-fee').textContent = '₹' + Number(s.fee_per_participant).toLocaleString('en-IN');
-        $('ns-status').textContent = label;
-        $('ns-seats').textContent = avail + ' of ' + cap + ' seats remaining';
-      }
+      paintSeats(sess, s);
+      watchSeats(sess.id);
     } catch(e) {
       // No future session in the database yet — compute the next Thursday locally
       // so the page always shows the correct upcoming date instead of an error.
