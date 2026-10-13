@@ -1506,21 +1506,36 @@
     emberField.appendChild(e);
   }
 
-  // Countdown to next Thursday 6:30 PM
-  function nextThursday() {
+  // Next upcoming Thursday 9:00 PM — the session the card shows and the countdown
+  // targets. Rolls to the following week once that time has passed.
+  let pkCountdownTarget = null;
+  function pkNextThursday(){
     const now = new Date();
-    const target = new Date(now);
-    const day = now.getDay(); // 0 Sun .. 4 Thu
-    let diff = (4 - day + 7) % 7;
-    target.setDate(now.getDate() + diff);
-    target.setHours(21,0,0,0); // Beej Mala begins 9:00 PM (matches booking sessions)
-    if(target <= now){ target.setDate(target.getDate() + 7); }
-    return target;
+    const thu = new Date(now);
+    thu.setDate(now.getDate() + ((4 - now.getDay() + 7) % 7));
+    thu.setHours(21,0,0,0);
+    if (thu <= now) thu.setDate(thu.getDate() + 7);
+    return thu;
   }
-  const target = nextThursday();
+  window.__pkSetCountdown = function(dateStr, timeStr){
+    if (dateStr) {
+      const parts = dateStr.split('-').map(Number);
+      const tp = (timeStr || '21:00:00').split(':').map(Number);
+      pkCountdownTarget = new Date(parts[0], parts[1] - 1, parts[2], tp[0] || 21, tp[1] || 0, 0, 0);
+    } else {
+      pkCountdownTarget = pkNextThursday();
+    }
+    updateCountdown();
+  };
   function updateCountdown(){
     const now = new Date();
-    let diff = Math.max(0, target - now);
+    if (!pkCountdownTarget) pkCountdownTarget = pkNextThursday();
+    let diff = pkCountdownTarget - now;
+    if (diff <= 0) {
+      // session time has passed — roll forward to next Thursday
+      pkCountdownTarget = pkNextThursday();
+      diff = Math.max(0, pkCountdownTarget - now);
+    }
     const d = Math.floor(diff / 86400000); diff -= d*86400000;
     const h = Math.floor(diff / 3600000); diff -= h*3600000;
     const m = Math.floor(diff / 60000); diff -= m*60000;
@@ -1603,25 +1618,21 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
 
-  // The Thursday this booking week is for.
-  // A booking week starts Wednesday 00:00 — at that moment the site rolls over to the
-  // NEXT Thursday, so seats reset to full every Wednesday midnight.
-  function activeThursday(){
+  // Next upcoming Thursday 9:00 PM — the session the card shows and the countdown
+  // targets. Rolls to the following week once that time has passed.
+  function pkNextThursday(){
     const now = new Date();
-    const dow = now.getDay();
     const thu = new Date(now);
-    thu.setDate(now.getDate() + ((4 - dow + 7) % 7));
-    thu.setHours(0, 0, 0, 0);
-    const wed = new Date(thu);
-    wed.setDate(thu.getDate() - 1);          // Wednesday before that Thursday
-    if (now >= wed) thu.setDate(thu.getDate() + 7);   // past Wednesday → next Thursday
+    thu.setDate(now.getDate() + ((4 - now.getDay() + 7) % 7));
+    thu.setHours(21,0,0,0);
+    if (thu <= now) thu.setDate(thu.getDate() + 7);
     return thu;
   }
 
-  // The session for the current booking week. If that Thursday is full, bookings stay
-  // closed until Wednesday midnight, when this rolls to the following Thursday.
+  // The upcoming session. If that Thursday is full, bookings stay closed until it
+  // passes, then the following Thursday takes over with a fresh 15 seats.
   async function findAvailableSession(){
-    const target = isoLocal(activeThursday());
+    const target = isoLocal(pkNextThursday());
     let { data: sess, error } = await supabase.from('sessions')
       .select('id, session_date, mantra_time, reporting_time, venue, fee_per_participant, capacity')
       .eq('session_date', target).limit(1).maybeSingle();
@@ -1645,6 +1656,8 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
   function paintSeats(sess, s) {
     const cap = s.capacity;
     const avail = cap - s.confirmed_seats;
+    // keep the countdown locked to this exact session's date and start time
+    if (window.__pkSetCountdown) window.__pkSetCountdown(s.session_date, s.mantra_time);
     $('teaser-date').textContent = fmtDate(s.session_date);
     $('teaser-time').textContent = fmtTime(s.mantra_time);
     $('teaser-reporting').textContent = fmtTime(s.reporting_time);
@@ -1655,7 +1668,12 @@ import { t as supabase } from '/assets/supabaseClient-PRvX8QuD.js';
     track.setAttribute('aria-valuenow', avail);
     track.setAttribute('aria-valuemax', cap);
     let label = statusMap[s.status_label] || 'Open';
-    if (avail <= 0) label = 'Full — reopens Wednesday';
+    if (avail <= 0) {
+      // full — say exactly when the next session opens (this one rolling over)
+      const nx = new Date(s.session_date + 'T00:00:00');
+      nx.setDate(nx.getDate() + 7);
+      label = 'Full — next session ' + nx.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+    }
     $('teaser-status-label').textContent = label;
     if ($('ns-date')) {
       $('ns-date').textContent = fmtDate(s.session_date);
