@@ -98,10 +98,23 @@ import{t as e}from"./supabaseClient-PRvX8QuD.js";var t={temple:{name:`Maa Baglam
               <input id="f-mobile" type="tel" inputmode="numeric" maxlength="10" value="${$(e.mobile)}" autocomplete="tel">
               <div class="err" id="err-mobile">Please enter a valid 10-digit mobile number.</div>
             </div>
-            <div class="field">
-              <label for="f-email">Email Address <span style="font-weight:400; text-transform:none;">(optional)</span></label>
-              <input id="f-email" type="email" value="${$(e.email)}" autocomplete="email">
-              <div class="err" id="err-email">Please enter a valid email address.</div>
+            <div class="field" id="f-email-wrap">
+              <label for="f-email">Email Address <span style="font-weight:400; text-transform:none;">— we'll send a verification code</span></label>
+              <div class="otp-row">
+                <input id="f-email" type="email" value="${$(e.email)}" autocomplete="email" placeholder="your@email.com">
+                <button type="button" class="btn btn-secondary otp-btn" id="otp-send">Send code</button>
+              </div>
+              <div class="err" id="err-email">Enter your email and verify the code we send you.</div>
+
+              <div class="otp-verify" id="otp-verify" hidden>
+                <div class="otp-row">
+                  <input id="f-otp" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code">
+                  <button type="button" class="btn btn-primary otp-btn" id="otp-check">Verify</button>
+                </div>
+                <div class="otp-hint" id="otp-hint">Code sent. It expires in 10 minutes.</div>
+              </div>
+
+              <div class="otp-status" id="otp-status"></div>
             </div>
           </div>
 
@@ -118,12 +131,14 @@ import{t as e}from"./supabaseClient-PRvX8QuD.js";var t={temple:{name:`Maa Baglam
           <div class="form-row-2">
             <div class="field" id="f-city-wrap">
               <label for="f-city">City</label>
-              <input id="f-city" type="text" value="${$(e.city)}" autocomplete="address-level2">
+              <input id="f-city" type="text" list="city-list" value="${$(e.city)}" autocomplete="address-level2" placeholder="Pick or type your city">
+              <datalist id="city-list"></datalist>
               <div class="err" id="err-city">Please enter your city.</div>
             </div>
             <div class="field" id="f-state-wrap">
               <label for="f-state">State</label>
-              <input id="f-state" type="text" value="${$(e.state)}" autocomplete="address-level1">
+              <input id="f-state" type="text" list="state-list" value="${$(e.state)}" autocomplete="address-level1" placeholder="Pick or type your state">
+              <datalist id="state-list"></datalist>
               <div class="err" id="err-state">Please enter your state.</div>
             </div>
           </div>
@@ -174,7 +189,7 @@ import{t as e}from"./supabaseClient-PRvX8QuD.js";var t={temple:{name:`Maa Baglam
       <input id="add-mobile-${t}" type="tel" inputmode="numeric" maxlength="10" value="${$(e.mobile)}" data-field="mobile" data-idx="${t}">
       <div class="err" id="err-add-mobile-${t}">Please enter a valid 10-digit mobile number.</div>
     </div>
-  </div>`}function F(e){return e.trim().length>=2}function I(e){let t=e.trim();return!(!/^[0-9]{10}$/.test(t)||/^([0-9])\1{9}$/.test(t))}function L(e){return!e.trim()||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())}function R(){let e=_.primary,t=(e,t)=>document.getElementById(e).classList.toggle(`has-error`,t);function n(){let n=!0,r=F(e.name);t(`f-name-wrap`,!r),n&&=r;let i=I(e.mobile);if(t(`f-mobile-wrap`,!i),n&&=i,L(e.email)?document.getElementById(`f-email`).closest(`.field`).classList.remove(`has-error`):(document.getElementById(`f-email`).closest(`.field`).classList.add(`has-error`),n=!1),!e.sameAsWhatsapp){let r=I(e.whatsapp);t(`f-wa-wrap`,!r),n&&=r}let a=e.city.trim().length>0;t(`f-city-wrap`,!a),n&&=a;let o=e.state.trim().length>0;t(`f-state-wrap`,!o),n&&=o,_.additional.forEach((e,t)=>{let r=F(e.name),i=document.getElementById(`add-name-${t}`)?.closest(`.field`);if(i&&i.classList.toggle(`has-error`,!r),n&&=r,e.mobile){let r=I(e.mobile),i=document.getElementById(`add-mobile-${t}`)?.closest(`.field`);i&&i.classList.toggle(`has-error`,!r),n&&=r}});let s=[e.name.trim().toLowerCase(),..._.additional.map(e=>e.name.trim().toLowerCase())].filter(Boolean),c=new Set(s).size!==s.length;document.getElementById(`dup-warning`).style.display=c?`block`:`none`;let l=_.consent.correct&&_.consent.paymentUnderstood&&_.consent.guidelines;return document.getElementById(`continue-2`).disabled=!(n&&l),n&&l}document.getElementById(`f-name`).addEventListener(`input`,t=>{e.name=t.target.value,g(),n()}),document.getElementById(`f-mobile`).addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.mobile=t.target.value,g(),n()}),document.getElementById(`f-email`).addEventListener(`input`,t=>{e.email=t.target.value,g(),n()}),document.getElementById(`f-city`).addEventListener(`input`,t=>{e.city=t.target.value,g(),n()}),document.getElementById(`f-state`).addEventListener(`input`,t=>{e.state=t.target.value,g(),n()}),document.getElementById(`f-same-wa`).addEventListener(`change`,t=>{e.sameAsWhatsapp=t.target.checked,document.getElementById(`f-wa-wrap`).style.display=e.sameAsWhatsapp?`none`:`block`,g(),n()});let r=document.getElementById(`f-whatsapp`);r&&r.addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.whatsapp=t.target.value,g(),n()}),_.additional.forEach((e,t)=>{document.getElementById(`add-name-${t}`).addEventListener(`input`,t=>{e.name=t.target.value,g(),n()}),document.getElementById(`add-mobile-${t}`).addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.mobile=t.target.value,g(),n()})}),[`correct`,`payment`,`guidelines`].forEach(e=>{let t={correct:`correct`,payment:`paymentUnderstood`,guidelines:`guidelines`};document.getElementById(`c-`+e).addEventListener(`change`,r=>{_.consent[t[e]]=r.target.checked,g(),n()})}),document.querySelectorAll(`[data-policy]`).forEach(e=>{e.addEventListener(`click`,()=>te(e.dataset.policy))}),document.getElementById(`back-2`).addEventListener(`click`,E),document.getElementById(`continue-2`).addEventListener(`click`,()=>{e.name=e.name.trim(),e.city=e.city.trim(),e.state=e.state.trim(),_.additional.forEach(e=>e.name=e.name.trim()),g(),T(`review`)}),n()}function z(){let e=_.primary,t=n.fee,r=_.participantCount*t;return`
+  </div>`}function F(e){return e.trim().length>=2}function I(e){let t=e.trim();return!(!/^[0-9]{10}$/.test(t)||/^([0-9])\1{9}$/.test(t))}function L(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())}function R(){let e=_.primary,t=(e,t)=>document.getElementById(e).classList.toggle(`has-error`,t);function _syncCityList(){if(!window.IN_LOCATIONS)return;window.fillDatalist(`state-list`,window.IN_LOCATIONS.states),window.fillDatalist(`city-list`,window.IN_LOCATIONS.cityOptions(e.state))}function _wireOtp(){window.PK_OTP&&window.PK_OTP.wire(()=>_,()=>n())}function n(){let n=!0,r=F(e.name);t(`f-name-wrap`,!r),n&&=r;let i=I(e.mobile);if(t(`f-mobile-wrap`,!i),n&&=i,(L(e.email)&&e.emailVerified?document.getElementById(`f-email`).closest(`.field`).classList.remove(`has-error`):(document.getElementById(`f-email`).closest(`.field`).classList.add(`has-error`),n=!1)),!e.sameAsWhatsapp){let r=I(e.whatsapp);t(`f-wa-wrap`,!r),n&&=r}let a=e.city.trim().length>0;t(`f-city-wrap`,!a),n&&=a;let o=e.state.trim().length>0;t(`f-state-wrap`,!o),n&&=o,_.additional.forEach((e,t)=>{let r=F(e.name),i=document.getElementById(`add-name-${t}`)?.closest(`.field`);if(i&&i.classList.toggle(`has-error`,!r),n&&=r,e.mobile){let r=I(e.mobile),i=document.getElementById(`add-mobile-${t}`)?.closest(`.field`);i&&i.classList.toggle(`has-error`,!r),n&&=r}});let s=[e.name.trim().toLowerCase(),..._.additional.map(e=>e.name.trim().toLowerCase())].filter(Boolean),c=new Set(s).size!==s.length;document.getElementById(`dup-warning`).style.display=c?`block`:`none`;let l=_.consent.correct&&_.consent.paymentUnderstood&&_.consent.guidelines;return document.getElementById(`continue-2`).disabled=!(n&&l),n&&l}document.getElementById(`f-name`).addEventListener(`input`,t=>{e.name=t.target.value,g(),n()}),document.getElementById(`f-mobile`).addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.mobile=t.target.value,g(),n()}),document.getElementById(`f-email`).addEventListener(`input`,t=>{e.email=t.target.value,g(),n()}),document.getElementById(`f-city`).addEventListener(`input`,t=>{e.city=t.target.value,g(),n(),window.IN_LOCATIONS&&!e.state&&(st=window.IN_LOCATIONS.stateForCity(e.city))&&(e.state=st,document.getElementById(`f-state`).value=st,_syncCityList(),n())}),document.getElementById(`f-state`).addEventListener(`input`,t=>{e.state=t.target.value,g(),_syncCityList(),n()}),document.getElementById(`f-same-wa`).addEventListener(`change`,t=>{e.sameAsWhatsapp=t.target.checked,document.getElementById(`f-wa-wrap`).style.display=e.sameAsWhatsapp?`none`:`block`,g(),n()});let r=document.getElementById(`f-whatsapp`);r&&r.addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.whatsapp=t.target.value,g(),n()}),_.additional.forEach((e,t)=>{document.getElementById(`add-name-${t}`).addEventListener(`input`,t=>{e.name=t.target.value,g(),n()}),document.getElementById(`add-mobile-${t}`).addEventListener(`input`,t=>{t.target.value=t.target.value.replace(/\D/g,``).slice(0,10),e.mobile=t.target.value,g(),n()})}),[`correct`,`payment`,`guidelines`].forEach(e=>{let t={correct:`correct`,payment:`paymentUnderstood`,guidelines:`guidelines`};document.getElementById(`c-`+e).addEventListener(`change`,r=>{_.consent[t[e]]=r.target.checked,g(),n()})}),document.querySelectorAll(`[data-policy]`).forEach(e=>{e.addEventListener(`click`,()=>te(e.dataset.policy))}),document.getElementById(`back-2`).addEventListener(`click`,E),document.getElementById(`continue-2`).addEventListener(`click`,()=>{e.name=e.name.trim(),e.city=e.city.trim(),e.state=e.state.trim(),_.additional.forEach(e=>e.name=e.name.trim()),g(),T(`review`)}),_syncCityList(),_wireOtp(),n()}function z(){let e=_.primary,t=n.fee,r=_.participantCount*t;return`
   ${y(3)}
   <main class="flow-main container">
     <div class="grid-2">
@@ -200,7 +215,7 @@ import{t as e}from"./supabaseClient-PRvX8QuD.js";var t={temple:{name:`Maa Baglam
               <div><div class="k">Name</div><div class="v">${e.name}</div></div>
               <div><div class="k">Mobile</div><div class="v">${S(e.mobile)}</div></div>
               <div><div class="k">WhatsApp</div><div class="v">${S(e.sameAsWhatsapp?e.mobile:e.whatsapp)}</div></div>
-              <div><div class="k">Email</div><div class="v">${e.email||`—`}</div></div>
+              <div><div class="k">Email</div><div class="v">${e.email||`—`}${e.emailVerified?` <span style="color:var(--green);font-size:0.75rem;font-weight:700;">✓ verified</span>`:``}</div></div>
               <div><div class="k">City</div><div class="v">${e.city}</div></div>
               <div><div class="k">State</div><div class="v">${e.state}</div></div>
             </div>

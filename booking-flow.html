@@ -168,6 +168,28 @@
   .form-row-2{ display:grid; gap:16px; }
   @media(min-width:560px){ .form-row-2{ grid-template-columns:1fr 1fr; } }
 
+  /* ---------- Email OTP verification ---------- */
+  .otp-row{ display:flex; gap:8px; align-items:stretch; }
+  .otp-row input{ flex:1; min-width:0; }
+  .otp-btn{
+    flex-shrink:0; padding: 13px 18px; font-size:0.85rem; font-weight:700;
+    border-radius: 12px; border:1px solid var(--line); cursor:pointer;
+    background: var(--ivory-dim); color: var(--maroon); white-space:nowrap;
+    transition: background .25s ease, border-color .25s ease, transform .2s ease;
+  }
+  .otp-btn:hover:not(:disabled){ border-color: var(--gold); background:#fff; }
+  .otp-btn:active:not(:disabled){ transform: scale(0.97); }
+  .otp-btn:disabled{ opacity:0.55; cursor:not-allowed; }
+  .otp-btn.primary{ background: linear-gradient(135deg, var(--gold), var(--saffron)); color: var(--maroon-deep); border-color:transparent; }
+  .otp-btn.primary:hover:not(:disabled){ background: linear-gradient(135deg, var(--gold-soft), var(--gold)); }
+  .otp-verify{ margin-top:10px; padding:14px; border-radius:14px; background: rgba(212,175,55,0.07); border:1px dashed rgba(212,175,55,0.45); }
+  .otp-hint{ margin-top:8px; font-size:0.76rem; color: var(--charcoal-soft); }
+  .otp-status{ margin-top:8px; font-size:0.82rem; font-weight:600; }
+  .otp-status.ok{ color: var(--green, #3d7a4d); }
+  .otp-status.err{ color: var(--red); }
+  .otp-status.wait{ color: var(--amber, #b5680a); }
+  #f-email.verified{ border-color: var(--green, #3d7a4d); background: rgba(61,122,77,0.06); }
+
   .checkbox-row{ display:flex; align-items:flex-start; gap:10px; font-size:0.85rem; color:var(--charcoal-soft); margin-bottom:14px; }
   .checkbox-row input{ margin-top:3px; accent-color: var(--gold); width:16px;height:16px; flex-shrink:0; }
 
@@ -305,6 +327,8 @@
   }
 </style>
   <script type="module" crossorigin src="/assets/booking-bFAiHXB2.js"></script>
+  <script src="/india-locations.js" defer></script>
+  <script src="/otp.js" defer></script>
   <link rel="modulepreload" crossorigin href="/assets/supabaseClient-PRvX8QuD.js">
 </head>
 <body>
